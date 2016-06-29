@@ -35,6 +35,8 @@ classdef NeuronGUI < handle
         parent
         batchInput
         batchOutput
+        hSlider
+        hControlpanel
     end
     
     
@@ -68,12 +70,14 @@ classdef NeuronGUI < handle
             end
             ngui.parameters=ngui.nip.getParameters;
             p = ngui.parameters(12)
-            [editBoxes nextActionTextbox,instructionTextbox, h, Handles]=createControlPanel(ngui.parameters, ngui.nip.getActionName,@ngui.forwardButtonCallback, @ngui.backButtonCallback, @ngui.saveButtonCallback, @ngui.quitButtonCallback, @ngui.batchButtonCallback, @ngui.parameterButtonCallback)
+            [editBoxes, nextActionTextbox,instructionTextbox, controlpanelHandle, buttonHandles, sliderHandles]=createControlPanel(ngui.parameters, ngui.nip.getActionName,@ngui.forwardButtonCallback, @ngui.backButtonCallback, @ngui.saveButtonCallback, @ngui.quitButtonCallback, @ngui.batchButtonCallback, @ngui.parameterButtonCallback, @ngui.sliderCallback, @ngui.editBoxCallback);
             ngui.editBoxes=editBoxes;
+            ngui.hSlider = sliderHandles;
             ngui.nextActionTextbox=nextActionTextbox;
             ngui.instructionTextbox = instructionTextbox;
             ngui.handle=[];
-            ngui.controlHandles = Handles;
+            ngui.controlHandles = buttonHandles; %handles of buttons on control panel
+            ngui.hControlpanel = controlpanelHandle; %handle of control panel window
         end
         function forwardButtonCallback(ngui,UIhandle,x)
             state=ngui.nip.getState();
@@ -91,6 +95,7 @@ classdef NeuronGUI < handle
             status=ngui.nip.next(ngui.parameters);
             updateUser(ngui,status);
         end
+        
         function updateUser(ngui,status)
             state=ngui.nip.getState();
             fprintf('%s\n',char(state))
@@ -352,6 +357,9 @@ classdef NeuronGUI < handle
                     enbl='off';
                 end
                 set(ngui.editBoxes(i),'Enable',enbl);
+                if i>1
+                set(ngui.hSlider(i-1),'Enable',enbl);
+                end
             end
             
             %             Function for obtaining the zoomed X Y limiits for zoom
@@ -369,7 +377,10 @@ classdef NeuronGUI < handle
             
         end
         function quitButtonCallback(ngui,UIhandle, x)
-            close all %need to check if that is sufficient
+            %             close all %need to check if that is sufficient
+            close(ngui.handle)%close the figure window
+            close(ngui.hControlpanel)%close the control panel window
+            
             rmpath(ngui.parent)   %remove the GAIN directory when the user quits the program
         end
         function batchButtonCallback(ngui,UIhandle, x)
@@ -429,6 +440,9 @@ classdef NeuronGUI < handle
             %             set(forwardButtonHandle,'Enable','off')
             %             set(batchButtonHandle,'Enable','off')
             
+            %figure close call back
+            % close batch processing window = click back to control panel
+            set(ngui.batch, 'CloseRequestFcn',@ngui.controlPanelButtonCallback)
         end
         function controlPanelButtonCallback(ngui,UIhandle, x) %back to control panel
             %                 error('Terminate batch processing.')
@@ -526,8 +540,9 @@ classdef NeuronGUI < handle
                 error(ngui.altparam)
             end
             ngui.parameters=ngui.nip.getParameters;
-            [editBoxesnew] = updateControlPanel(ngui.editBoxes, ngui.parameters, ngui.h);
+            [editBoxesnew, hSlidernew] = updateControlPanel(ngui.editBoxes, ngui.parameters, ngui.h, ngui.hSlider);
             ngui.editBoxes=editBoxesnew;
+            ngui.hSlider=hSlidernew;
         end
         
         function processButtonCallback(ngui, UIhandle, x)
@@ -565,6 +580,41 @@ classdef NeuronGUI < handle
             parameterData=strcat(PathName, FileName);
             ngui.nip.writeParametersFile(parameterData);
         end
+        
+        function sliderCallback(ngui, UIhandle, x)
+            %(1) Update edit boxes
+            num = length(ngui.hSlider);%num of sliders
+            sliderValue = cell(1,num);
+            for k = 1:num
+            sliderValue{k} = num2str(get(ngui.hSlider(k),'Value'));
+            set(ngui.editBoxes(k+1),'String', sliderValue{k})
+            end
+            
+%             %(2) Call NIP to perform processing at a specific step
+%             for i=1:numel(ngui.editBoxes);
+%                 valueString=get(ngui.editBoxes(i),'string');
+%                 ngui.parameters(i).value=valueString;
+%             end
+%             status=ngui.nip.next(ngui.parameters);
+%             updateUser(ngui,status);
+            
+%             %(3) Call NIP to go back to the previous state
+%             status=ngui.nip.back();
+%             updateUser(ngui,status);
+            
+            
+        end
+        
+        function editBoxCallback(ngui, UIhandle, x)
+            num = length(ngui.hSlider);%num of sliders
+            textValue = zeros(1,num);
+            for k = 1:num
+                textValue(k) = str2num(get(ngui.editBoxes(k+1),'String'));
+                set(ngui.hSlider(k),'Value', textValue(k))
+            end
+            
+        end
+        
         
         %         function
         %         end

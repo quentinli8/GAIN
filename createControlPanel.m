@@ -1,5 +1,5 @@
-function [edit_box nextActionTextbox,instructionTextbox, h,Handles]=createControlPanel(oneParameterArr, buttonLabel,forwardCallbackHandle,backCallbackHandle, saveCallbackHandle, quitCallbackHandle, batchCallbackHandle, parameterCallbackHandle)
-h=figure;
+function [edit_box nextActionTextbox,instructionTextbox, hControlPanel,Handles,hSlider]=createControlPanel(oneParameterArr, buttonLabel,forwardCallbackHandle,backCallbackHandle, saveCallbackHandle, quitCallbackHandle, batchCallbackHandle, parameterCallbackHandle, sliderCallbackHandle,editBoxCallbackHandle)
+hControlPanel=figure;
 leftMargin=10;
 bottomMargin=10;
 pushButtonWidth=130;
@@ -8,10 +8,11 @@ horizontalSpace=20;
 fileNameBox = 280; %originally 330 (6/27/16)
 editBoxHeight=20;
 editBoxWidth=60;
-verticalSpace=10;  %spacing between edit boxes (originally 20) (6/27/16)
+verticalSpace=20;  %spacing between edit boxes (originally 20) (6/27/16)   %10 6/28
 textBoxHeight=20;  
 textBoxWidth=200; % 250
 instructionBoxWidth=100; %instruciton for parameters
+buttonGap = 10; %the vertical gap between buttons
 totalwidth = leftMargin*2 + editBoxWidth + horizontalSpace + textBoxWidth + ...
              instructionBoxWidth;
 savepushButtonHandle=uicontrol('Style','pushbutton',...
@@ -24,7 +25,7 @@ batchpushButtonHandle=uicontrol('Style','pushbutton',...
     'string','Exit to Batch Processing',...
     'position',[leftMargin+pushButtonWidth+horizontalSpace bottomMargin pushButtonWidth pushButtonHeight],...
     'callback',batchCallbackHandle);
-bottom=bottomMargin+pushButtonHeight+verticalSpace;
+bottom=bottomMargin+pushButtonHeight+buttonGap;
 backpushButtonHandle=uicontrol('Style','pushbutton',...
     'units', 'pixels',... 
     'string', char(8592), 'FontSize', 24, ...%8592 - Unicode Dec(HTML)
@@ -54,14 +55,14 @@ nextActionTextbox=uicontrol('Style','text',...
     'string',buttonLabel,...
     'FontWeight', 'bold', ...
     'position',[leftMargin+pushButtonWidth+horizontalSpace bottom pushButtonWidth textBoxHeight*1.5]);
-bottomInstruction=bottom+textBoxHeight+pushButtonHeight+verticalSpace*2+(editBoxHeight+verticalSpace)*8;
+bottomInstruction=bottom+textBoxHeight+pushButtonHeight+verticalSpace+(editBoxHeight+verticalSpace)*7;
 instructionTextbox=uicontrol('Style','text',... %instruction for each parameter
     'units', 'pixels',...
     'FontSize', 11.5,...
     'BackgroundColor', [1,1,1],...
     'HorizontalAlignment','left',...
     'string',buttonLabel,...%temporary string. Should be changed to parameter descriptions 
-    'position',[leftMargin+fileNameBox bottomInstruction instructionBoxWidth textBoxHeight*2+verticalSpace]);
+    'position',[leftMargin+fileNameBox bottomInstruction instructionBoxWidth (textBoxHeight*2+verticalSpace)*2]);
 backButtonName=uicontrol('Style','text',...
     'units', 'pixels',...
     'string','Back',...
@@ -71,18 +72,29 @@ backButtonName=uicontrol('Style','text',...
 bottom=bottom+pushButtonHeight+verticalSpace;
 
 for i=numel(oneParameterArr):-1:4
-    edit_box(i)=createEditBox(h,i,oneParameterArr(i),[leftMargin bottom editBoxWidth editBoxHeight],[leftMargin+editBoxWidth+horizontalSpace bottom textBoxWidth textBoxHeight]);
+    edit_box(i)=createEditBox(hControlPanel,i,oneParameterArr(i),[leftMargin bottom editBoxWidth editBoxHeight],[leftMargin+editBoxWidth+horizontalSpace bottom textBoxWidth textBoxHeight],editBoxCallbackHandle);
+    hSlider(i-1) = createSlider(hControlPanel,edit_box(i),[leftMargin bottom-18 editBoxWidth+horizontalSpace+textBoxWidth 15], sliderCallbackHandle);  
     bottom=bottom+(editBoxHeight+verticalSpace);
 end
 for i=3:-1:2
-    edit_box(i)=createEditBox(h,i,oneParameterArr(i),[leftMargin bottom editBoxWidth editBoxHeight],[leftMargin+editBoxWidth+horizontalSpace bottom textBoxWidth*1/2 textBoxHeight]);
+    edit_box(i)=createEditBox(hControlPanel,i,oneParameterArr(i),[leftMargin bottom editBoxWidth editBoxHeight],[leftMargin+editBoxWidth+horizontalSpace bottom textBoxWidth*1/2 textBoxHeight], editBoxCallbackHandle);
+    hSlider(i-1) = createSlider(hControlPanel,edit_box(i),[leftMargin bottom-18 editBoxWidth+horizontalSpace+textBoxWidth 15], sliderCallbackHandle);
     bottom=bottom+(editBoxHeight+verticalSpace);
 end
+bottom = bottom - 10;
 for i= 1:-1:1
-    edit_box(i)=createEditBox(h,i,oneParameterArr(i),[leftMargin bottom fileNameBox editBoxHeight],[leftMargin+fileNameBox+horizontalSpace bottom textBoxWidth textBoxHeight]);
-    bottom=bottom+(editBoxHeight+verticalSpace);
+    edit_box(i)=createEditBox(hControlPanel,i,oneParameterArr(i),[leftMargin bottom fileNameBox editBoxHeight],[leftMargin+fileNameBox+horizontalSpace bottom textBoxWidth textBoxHeight]);
+    bottom=bottom+(editBoxHeight+buttonGap);
 end
 
+% %create a slider for the first parameter
+% for k=(numel(oneParameterArr))-1:-1:1 % one fewer than edit boxes
+% hSlider(k) = createSlider(h,edit_box,[leftMargin bottom editBoxWidth editBoxHeight])    
+% end
+% hSlider = uicontrol('Style', 'slider',...
+%      'position', [leftMargin, bottomInstruction+verticalSpace+2, editBoxWidth+horizontalSpace+textBoxWidth, 15],...
+%      'Min',0,'Max',10,'Value',1,...
+%      'callback',sliderCallbackHandle);
 
 quitButtonHandle=uicontrol('Style','pushbutton',...
     'units', 'pixels',...
@@ -96,7 +108,9 @@ parameterButtonHandle=uicontrol('Style','pushbutton',...
     'position',[leftMargin bottom pushButtonWidth pushButtonHeight],...
     'callback',parameterCallbackHandle);
 
+
+
  
-set(h, 'Position', [100, 100, totalwidth, bottom+pushButtonHeight+verticalSpace]);
+set(hControlPanel, 'Position', [30, 40, totalwidth, bottom+pushButtonHeight+buttonGap]);
 Handles = {savepushButtonHandle,parameterButtonHandle,quitButtonHandle,backpushButtonHandle,pushButtonHandle,batchpushButtonHandle};    
 end
